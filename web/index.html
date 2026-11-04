@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PPT 换皮工作台 · 北大红模板</title>
+<style>
+  :root {
+    --red: #8B0012;
+    --red-soft: rgba(139, 0, 18, 0.15);
+    --paper: #FAF6F2;
+    --card: #FAF5F5;
+    --ink: #1F2329;
+    --body: #5A5A5A;
+    --sub: #787878;
+    --line: #E8DED6;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    min-height: 100vh;
+  }
+  .topbar {
+    background: linear-gradient(90deg, #6E000E, var(--red));
+    color: #fff;
+    padding: 14px 28px;
+    display: flex; align-items: baseline; gap: 14px;
+  }
+  .topbar .brand { font-size: 18px; font-weight: 700; letter-spacing: 2px; }
+  .topbar .tag { font-size: 12px; opacity: .75; letter-spacing: 1px; }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 48px 24px 80px; }
+  h1 { font-size: 28px; font-weight: 700; line-height: 1.4; }
+  h1 .accent { color: var(--red); }
+  .lede { color: var(--sub); font-size: 14px; margin-top: 10px; line-height: 1.8; }
+  .rule { width: 46px; height: 4px; background: var(--red); border-radius: 2px; margin: 22px 0 30px; }
+
+  .drop {
+    background: var(--card);
+    border: 1.5px dashed rgba(139,0,18,.35);
+    border-radius: 14px;
+    padding: 46px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all .2s ease;
+  }
+  .drop:hover, .drop.over { border-color: var(--red); background: #fff; box-shadow: 0 6px 24px rgba(139,0,18,.08); }
+  .drop.disabled { pointer-events: none; opacity: .55; }
+  .drop .icon {
+    width: 52px; height: 52px; margin: 0 auto 14px;
+    border-radius: 50%; background: var(--red); color: #fff;
+    display: flex; align-items: center; justify-content: center; font-size: 24px;
+  }
+  .drop .main { font-size: 16px; font-weight: 600; }
+  .drop .hint { font-size: 12.5px; color: var(--sub); margin-top: 8px; }
+
+  .panel { margin-top: 26px; display: none; }
+  .panel.show { display: block; }
+  .filecard {
+    background: #fff; border: 1px solid var(--line); border-radius: 12px;
+    padding: 18px 22px; display: flex; align-items: center; gap: 14px;
+  }
+  .filecard .badge {
+    flex: none; background: var(--red-soft); color: var(--red);
+    font-size: 11px; font-weight: 700; padding: 6px 10px; border-radius: 6px;
+    letter-spacing: 1px;
+  }
+  .filecard .fname { font-size: 14.5px; font-weight: 600; word-break: break-all; }
+  .progress { margin-top: 18px; }
+  .progress .msg { font-size: 13px; color: var(--body); margin-bottom: 10px; }
+  .bar { height: 6px; border-radius: 3px; background: #EFE7DF; overflow: hidden; }
+  .bar i { display: block; height: 100%; width: 34%; background: var(--red); border-radius: 3px; }
+  .bar.indet i { animation: slide 1.4s ease-in-out infinite; }
+  @keyframes slide { 0% { margin-left: -34%; } 100% { margin-left: 100%; } }
+
+  .done-box { text-align: center; padding: 10px 0 4px; }
+  .done-box .ok-icon {
+    width: 56px; height: 56px; margin: 0 auto 14px;
+    border-radius: 50%; background: var(--red); color: #fff;
+    display: flex; align-items: center; justify-content: center; font-size: 26px;
+  }
+  .done-box .t { font-size: 16px; font-weight: 700; }
+  .done-box .d { font-size: 13px; color: var(--sub); margin: 8px 0 20px; }
+  .btn {
+    display: inline-block; background: var(--red); color: #fff;
+    font-size: 14.5px; font-weight: 600; padding: 12px 34px; border-radius: 8px;
+    border: none; cursor: pointer; letter-spacing: 1px; transition: background .2s;
+  }
+  .btn:hover { background: #6E000E; }
+  .again {
+    display: inline-block; margin-left: 14px;
+    font-size: 13px; color: var(--sub);
+    background: none; border: none; cursor: pointer; text-decoration: underline;
+  }
+
+  .steps { margin-top: 44px; }
+  .steps .st { display: flex; gap: 14px; margin-bottom: 16px; align-items: baseline; }
+  .steps .n { color: var(--red); font-weight: 700; font-size: 13px; flex: none; }
+  .steps .s { font-size: 13.5px; color: var(--body); line-height: 1.7; }
+  .err {
+    margin-top: 18px; padding: 14px 18px;
+    background: #FBEDED; border: 1px solid rgba(139,0,18,.25);
+    border-radius: 10px; color: var(--red); font-size: 13.5px; line-height: 1.7;
+    display: none;
+  }
+  .boot {
+    margin-top: 22px;
+    background: #fff; border: 1px solid var(--line); border-radius: 12px;
+    padding: 16px 22px;
+  }
+  .boot .msg { font-size: 13px; color: var(--body); margin-bottom: 10px; }
+  footer { text-align: center; color: #B9AEA4; font-size: 11.5px; padding: 30px 0 40px; letter-spacing: 1px; }
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <span class="brand">PPT 换皮工作台</span>
+    <span class="tag">北大红卡片模板 · 自动排版</span>
+  </div>
+
+  <div class="wrap">
+    <h1>把一份 PPT 丢进来，<br>出来就是<span class="accent">北大红</span>的样子。</h1>
+    <div class="lede">转换在你的浏览器里完成，文件不会上传到任何服务器。<br>自动识别封面、目录、章节页、要点与表格，逐页套用统一版式。</div>
+    <div class="rule"></div>
+
+    <div class="boot" id="boot">
+      <div class="msg" id="bootmsg">正在启动排版引擎…</div>
+      <div class="bar indet"><i></i></div>
+    </div>
+
+    <div class="drop disabled" id="drop" style="margin-top: 26px;">
+      <div class="icon">⇪</div>
+      <div class="main">点击选择，或把文件拖到这里</div>
+      <div class="hint">支持 .pptx · 单文件 · 引擎就绪后可选</div>
+    </div>
+    <input type="file" id="file" accept=".pptx" hidden>
+
+    <div class="panel" id="running">
+      <div class="filecard">
+        <span class="badge">PPTX</span>
+        <span class="fname" id="fname"></span>
+      </div>
+      <div class="progress">
+        <div class="msg" id="pmsg">正在排版…页面较多时页面可能短暂停顿，请稍候</div>
+        <div class="bar indet"><i></i></div>
+      </div>
+    </div>
+
+    <div class="panel" id="finished">
+      <div class="done-box">
+        <div class="ok-icon">✓</div>
+        <div class="t">转换完成</div>
+        <div class="d" id="donename"></div>
+        <button class="btn" id="dl">下载成品 PPT</button>
+        <button class="again" id="again">再换一份</button>
+      </div>
+    </div>
+
+    <div class="err" id="err"></div>
+
+    <div class="steps">
+      <div class="st"><span class="n">01</span><span class="s">首次打开会加载一次排版引擎（约 10–20 秒），之后就快了；</span></div>
+      <div class="st"><span class="n">02</span><span class="s">上传后引擎逐页识别内容类型：封面 / 目录 / 章节页 / 要点卡片 / 表格；</span></div>
+      <div class="st"><span class="n">03</span><span class="s">完成后下载，文件名自动加「北大模板版」。仅支持 .pptx（老版 .ppt 请先另存为 .pptx）。</span></div>
+    </div>
+  </div>
+
+  <footer>纯浏览器转换 · 文件不上传服务器</footer>
+
+<script src="pyodide/pyodide.js"></script>
+<script>
+const drop = document.getElementById('drop');
+const fileInput = document.getElementById('file');
+const boot = document.getElementById('boot');
+const bootmsg = document.getElementById('bootmsg');
+const running = document.getElementById('running');
+const finished = document.getElementById('finished');
+const errBox = document.getElementById('err');
+
+let pyodide = null;
+let outBlobUrl = null;
+let outName = '';
+
+function fail(msg) {
+  running.classList.remove('show');
+  errBox.textContent = msg;
+  errBox.style.display = 'block';
+}
+
+async function bootEngine() {
+  try {
+    bootmsg.textContent = '正在加载运行环境（首次约 10–30 秒）…';
+    pyodide = await loadPyodide({ indexURL: 'pyodide/' });
+    bootmsg.textContent = '正在安装排版依赖…';
+    await pyodide.loadPackage(['micropip', 'packaging', 'lxml', 'pillow', 'typing-extensions']);
+    const micropip = pyodide.pyimport('micropip');
+    await micropip.install('wheels/python_pptx-1.0.2-py3-none-any.whl');
+    bootmsg.textContent = '正在载入排版引擎…';
+    const [baseBuf, engineSrc] = await Promise.all([
+      fetch('skin/base.pptx').then(r => r.arrayBuffer()),
+      fetch('engine.py').then(r => r.text()),
+    ]);
+    pyodide.globals.set('__file__', '/engine.py');
+    pyodide.FS.writeFile('/engine.py', engineSrc);
+    pyodide.FS.writeFile('/base.pptx', new Uint8Array(baseBuf));
+    await pyodide.runPythonAsync(
+      'import sys\n' +
+      'sys.path.insert(0, "/")\n' +
+      'import engine\n' +
+      'engine.set_base_bytes(open("/base.pptx","rb").read())\n' +
+      'print("engine ready")'
+    );
+    boot.style.display = 'none';
+    drop.classList.remove('disabled');
+  } catch (e) {
+    bootmsg.textContent = '引擎加载失败，请刷新重试';
+    fail('引擎加载失败：' + (e.message || e));
+  }
+}
+
+async function convert(f) {
+  reset();
+  document.getElementById('fname').textContent = f.name;
+  running.classList.add('show');
+  errBox.style.display = 'none';
+  try {
+    const data = new Uint8Array(await f.arrayBuffer());
+    pyodide.FS.writeFile('/input.pptx', data);
+    // 同步重计算：允许浏览器先绘制一帧
+    await new Promise(r => setTimeout(r, 60));
+    const b64 = await pyodide.runPythonAsync(
+      'import engine, base64\n' +
+      'res = engine.build_bytes(open("/input.pptx","rb").read())\n' +
+      'base64.b64encode(res).decode()'
+    );
+    const bin = atob(b64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    if (outBlobUrl) URL.revokeObjectURL(outBlobUrl);
+    outBlobUrl = URL.createObjectURL(new Blob([bytes], {
+      type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+    }));
+    outName = f.name.replace(/\.pptx$/i, '') + '-北大模板版.pptx';
+    document.getElementById('donename').textContent = outName;
+    document.getElementById('dl').onclick = () => {
+      const a = document.createElement('a');
+      a.href = outBlobUrl; a.download = outName; a.click();
+    };
+    running.classList.remove('show');
+    finished.classList.add('show');
+  } catch (e) {
+    fail('转换失败：' + (e.message || e));
+  }
+}
+
+function reset() {
+  running.classList.remove('show');
+  finished.classList.remove('show');
+  errBox.style.display = 'none';
+  fileInput.value = '';
+}
+
+drop.addEventListener('click', () => fileInput.click());
+drop.addEventListener('dragover', e => { e.preventDefault(); if (!drop.classList.contains('disabled')) drop.classList.add('over'); });
+drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+drop.addEventListener('drop', e => {
+  e.preventDefault(); drop.classList.remove('over');
+  if (e.dataTransfer.files.length) {
+    const f = e.dataTransfer.files[0];
+    if (!f.name.toLowerCase().endsWith('.pptx')) { fail('请上传 .pptx 文件（老版 .ppt 请先在 PowerPoint/WPS 里另存为 .pptx）'); return; }
+    convert(f);
+  }
+});
+fileInput.addEventListener('change', () => { if (fileInput.files.length) convert(fileInput.files[0]); });
+document.getElementById('again').addEventListener('click', reset);
+
+bootEngine();
+</script>
+</body>
+</html>

@@ -31,6 +31,19 @@ FONT  = "Noto Sans SC"
 SKIN_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "skin")
 BASE = os.path.join(SKIN_DIR, "base.pptx")
 
+# 浏览器版：base.pptx 以字节注入，不走文件系统
+_base_bytes = None
+
+
+def set_base_bytes(data):
+    global _base_bytes
+    _base_bytes = data
+
+
+def _base_src():
+    import io
+    return io.BytesIO(_base_bytes) if _base_bytes is not None else BASE
+
 FOOTER_RE = re.compile(r"^(来源|依据|资料来源|参考|注)[:：]?")
 PAGENO_RE = re.compile(r"^([Pp]\d{1,2}|\d{1,2}\s*/\s*\d{1,2})$")
 
@@ -40,7 +53,7 @@ def skin():
     global _skin
     if _skin is not None:
         return _skin
-    ref = Presentation(BASE)
+    ref = Presentation(_base_src())
     sk = {"banner_xml": None, "badge_hos": None, "badge_dept": None,
           "band_top": None, "band_cloud": None, "ending_idx": len(ref.slides.__iter__.__self__._sldIdLst) - 1}
     s2 = ref.slides[1]
@@ -336,7 +349,18 @@ def _split_groups(flat, body_median):
     return groups, []
 
 def plan_and_build(src_path, out_path, progress=None):
-    raw, sw, sh_ = parse_deck(src_path)
+    """路径版入口：读文件 → 生成 → 存盘。浏览器版请用 build_bytes。"""
+    with open(src_path, "rb") as f:
+        data = f.read()
+    return build_bytes(data, out_path, progress)
+
+
+def build_bytes(src_data, out_path=None, progress=None):
+    """字节版入口：src_data 为 pptx 字节；out_path 为 None 时返回输出字节。"""
+    import io
+    if isinstance(src_data, (bytes, bytearray)):
+        src_data = io.BytesIO(src_data)
+    raw, sw, sh_ = parse_deck(src_data)
     pages = [_norm_page(b) for b in raw]
     kinds = classify(pages)
 
@@ -390,7 +414,7 @@ def plan_and_build(src_path, out_path, progress=None):
         toc_entries = []
 
     # ---- 开始生成 ----
-    prs = Presentation(BASE)
+    prs = Presentation(_base_src())
     blank = prs.slides[1].slide_layout
     add = prs.slides.add_slide
     n_made = 0
@@ -487,9 +511,15 @@ def plan_and_build(src_path, out_path, progress=None):
         lst.remove(sid)
     sid = list(lst)[0]          # 模板结束页挪到最后
     lst.remove(sid); lst.append(sid)
-    prs.save(out_path)
+    if out_path:
+        prs.save(out_path)
+        tick("完成")
+        return n_made + 1
+    import io
+    buf = io.BytesIO()
+    prs.save(buf)
     tick("完成")
-    return n_made + 1
+    return buf.getvalue()
 
 # ---------------- 内容页排版（引擎核心判断） ----------------
 BODY_TOP, BODY_BOTTOM = 1.72, 6.45
