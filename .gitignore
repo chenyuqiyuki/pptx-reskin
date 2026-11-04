@@ -1,0 +1,15 @@
+# 个人文件 / 临时产物，一律不入库
+uploads/*
+!uploads/.gitkeep
+outputs/*
+!outputs/.gitkeep
+*.png
+*.pdf
+__pycache__/
+*.pyc
+.DS_Store
+*.pptx
+*.ppt
+!skin/base.pptx
+work/
+templates/.DS_Store
