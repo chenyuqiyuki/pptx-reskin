@@ -688,9 +688,14 @@ def _render_numbered(s, num, top, avail_h, body_w):
             pad = 0.18
             yy = top + 0.16
             if c["header"]:
-                txt(s, cx + pad, yy, cw - 2 * pad, 0.34,
-                    [{"t": c["header"][:26], "s": 13.5 if len(c["header"]) <= 16 else 12, "c": RED, "b": True}])
-                yy += 0.44
+                hl = len(c["header"])
+                fs_h = 13.5 if hl <= 16 else (12 if hl <= 26 else 11)
+                cpl = max(4.0, (cw - 2 * pad) * 72 / (fs_h * 1.05))
+                lines = max(1, math.ceil(hl / cpl))
+                hh_ = lines * fs_h * 1.2 / 72 + 0.08
+                txt(s, cx + pad, yy, cw - 2 * pad, hh_,
+                    [{"t": c["header"], "s": fs_h, "c": RED, "b": True, "ls": 1.12}])
+                yy += hh_ + 0.04
             # 自适应字号：条目总高超过卡片就逐级缩小
             w_text = cw - pad * 2 - 0.48
             notes_txt = " ".join(c["notes"])[:90] if c["notes"] else None
@@ -744,17 +749,18 @@ def _render_numbered(s, num, top, avail_h, body_w):
     # 逐行按内容估高，整体缩放适配可用空间
     hs = []
     for it in items:
-        h_ = 0.56
+        h_ = 0.66
         if it.get("desc"):
-            h_ += _est_h([it["desc"]], 12, w - 1.05, ls=1.2)
-        hs.append(min(max(h_, 0.62), 1.35))
+            h_ += _est_h([it["desc"]], 12, w - 1.05, ls=1.2) * 1.3
+        hs.append(min(max(h_, 0.62), 1.5))
     total = sum(hs) + 0.14 * (n - 1)
     scale = min(1.0, (avail_h - 0.08) / total) if total > 0 else 1.0
     y = top + max(0.0, (avail_h - total * scale) / 2)
     for it, h0 in zip(items, hs):
         rh = h0 * scale
         _num_row_at(s, x0, y, w, rh, it["no"], it["ti"],
-                    desc=it["desc"] or None, title_size=15, desc_size=12)
+                    desc=it["desc"] or None, title_size=15,
+                    desc_size=max(9, round(12 * min(1.0, scale * 1.25), 1)))
         y += rh + 0.14 * scale
 
 
@@ -911,16 +917,14 @@ def _content_slide(new_slide, pg, kind):
             used_txt |= {f[2] for f in kick}
         subs = [f[2] for f in flat
                 if f[2] not in used_txt and not f[1] and f[0] >= tmax * 0.55 and f[0] < tmax * 0.75
-                and 0 < len(f[2]) <= 36 and (not bigs or f[3] >= title_src_y)]
+                and 0 < len(f[2]) <= 36 and (not bigs or f[3] >= title_src_y)
+                and f[3] < 2.0]  # 副题只从标题下方近处挑，防止抢走组内正文
         sub = extra_big[0] if extra_big else (subs[0] if subs else None)
         if sub:
             used_txt.add(sub)
-        # 眉题与副题同占一行区域：短则合并；放不下时副题优先，眉题行释放回正文（避免内容丢失）
-        if kicker and sub:
-            if len(kicker) + len(sub) <= 42:
-                sub = kicker + " ｜ " + sub
-            else:
-                used_txt -= {f[2] for f in kick}
+        # 眉题与副题同占一行区域：短则合并；放不下时两者都渲染（眉题移到副题下方一行）
+        if kicker and sub and len(kicker) + len(sub) <= 42:
+            sub = kicker + " ｜ " + sub
             kicker = None
     else:
         title, sub = "内容", None
@@ -932,8 +936,9 @@ def _content_slide(new_slide, pg, kind):
 
     top = BODY_TOP
     if kicker:
-        txt(s, BODY_X, 1.44, BODY_W, 0.3, [{"t": kicker, "s": 11, "c": RED, "b": True}])
-        top = BODY_TOP + 0.36
+        ky = 1.76 if sub else 1.44  # 有副题时眉题放副题下方，避免重叠
+        txt(s, BODY_X, ky, BODY_W, 0.3, [{"t": kicker, "s": 11, "c": RED, "b": True}])
+        top = BODY_TOP + (0.42 if sub else 0.36)
     if pg["footer"]:
         pass  # footer 放页底
     avail_h = BODY_BOTTOM - top - (0.42 if pg["footer"] else 0.12)
@@ -979,6 +984,22 @@ def _content_slide(new_slide, pg, kind):
     else:
         groups, flatlist = _split_groups(body, body_median)
     groups = [(h, _merge_num_items(items)) for h, items in groups]
+    # 末组长金句（无编号前缀、带句读、无正文）先转红条，避免被空组合并吃掉
+    _bar_candidate = None
+    if groups and len(groups[-1][1]) == 0 and groups[-1][0] \
+            and len(groups[-1][0]) > 15 and re.search(r"[。；]", groups[-1][0]) \
+            and not re.match(r"^[（(]?[0-9０-９一二三四五六七八九十]", groups[-1][0]):
+        _bar_candidate = groups[-1][0]
+        groups = groups[:-1]
+    # 空组头（冒号引导句单独成组）并入下一组，避免空卡片
+    merged = []
+    for h_, its_ in groups:
+        if (merged and its_ == [] and h_ and merged[-1][1]
+                and not re.match(r"^(结论|注意|易错点|执行判断|小结)$", (h_ or "").strip())):
+            merged[-1] = (merged[-1][0] + " " + h_, merged[-1][1])
+        else:
+            merged.append((h_, its_))
+    groups = merged
     flatlist = _merge_num_items(flatlist)
     flatlist = [x for x in flatlist if x]
     if not groups and not flatlist:
@@ -986,7 +1007,7 @@ def _content_slide(new_slide, pg, kind):
         return
 
     # 「结论/注意」短标签 + 相邻金句 → 底部红条（可出现在任何一组）
-    bar_text = None
+    bar_text = _bar_candidate
     for gi, (h_, its_) in enumerate(groups):
         for ii in range(len(its_)):
             if not re.fullmatch(r"结论|注意|小结", str(its_[ii]).strip()):
@@ -1003,6 +1024,11 @@ def _content_slide(new_slide, pg, kind):
         if bar_text:
             break
     if not bar_text and groups and len(groups[-1][1]) == 0 and re.match(r"^(结论|注意|易错点|执行|怎么用|一句话|要点)", groups[-1][0] or ""):
+        bar_text = groups[-1][0]; groups = groups[:-1]
+    elif not bar_text and groups and len(groups[-1][1]) == 0 and groups[-1][0] \
+            and len(groups[-1][0]) > 15 and re.search(r"[。；]", groups[-1][0]) \
+            and not re.match(r"^[（(]?[0-9０-９一二三四五六七八九十]", groups[-1][0]):
+        # 末组长金句（无编号前缀、带句读）→ 底部红条
         bar_text = groups[-1][0]; groups = groups[:-1]
     elif groups and len(groups[-1][1]) <= 1 and re.match(r"^(结论|注意|易错点|执行判断|怎么用)", (groups[-1][0] or "")):
         bar_text = groups[-1][0] + "：" + ("；".join(groups[-1][1])); groups = groups[:-1]
@@ -1088,7 +1114,10 @@ def _num_row_at(slide, x, y, w, h, num, title, desc=None, title_size=15.5, desc_
         tw = w - 0.56
     if desc:
         txt(slide, tx, y + 0.10, tw - 0.6, 0.34, [{"t": title, "s": title_size, "c": DARK, "b": True}])
-        txt(slide, tx, y + 0.10 + 0.36, tw, h - 0.5, [{"t": desc, "s": desc_size, "c": BODYC, "ls": 1.2}])
+        ds_ = desc_size
+        while ds_ > 8 and _est_h([desc], ds_, tw, ls=1.2) > h - 0.5:
+            ds_ -= 0.5
+        txt(slide, tx, y + 0.10 + 0.36, tw, h - 0.42, [{"t": desc, "s": ds_, "c": BODYC, "ls": 1.2}])
     else:
         # 标题过长自动缩字号
         ts = title_size
@@ -1110,16 +1139,22 @@ def _layout_columns(s, top, avail_h, groups, body_w):
         pad = 0.18
         yy = top + 0.16
         if hname:
-            txt(s, cx + pad, yy, cw - 2 * pad, 0.34,
-                [{"t": hname[:26], "s": 13.5 if len(hname) <= 16 else 12, "c": RED, "b": True}])
-            yy += 0.42
+            # 组头不截断：按卡片宽度估算行数，缩字号+动态高度
+            hl = len(hname)
+            fs_h = 13.5 if hl <= 16 else (12 if hl <= 26 else 11)
+            cpl = max(4.0, (cw - 2 * pad) * 72 / (fs_h * 1.05))
+            lines = max(1, math.ceil(hl / cpl))
+            hh_ = lines * fs_h * 1.2 / 72 + 0.08
+            txt(s, cx + pad, yy, cw - 2 * pad, hh_,
+                [{"t": hname, "s": fs_h, "c": RED, "b": True, "ls": 1.12}])
+            yy += hh_ + 0.04
         paras, runs_line = [], []
         for j, it in enumerate(items):
             paras.append({"runs": [(f"{j+1}  ", 13, RED, True), (it, 12, DARK, False)], "sb": 7})
         # 估算需要高度，必要时缩字号
         base = 1.0
         total_lines = sum(max(1, math.ceil(_wlen(it) / ((cw - 2 * pad) * 72 / 12))) for it in items)
-        need = total_lines * 12 * 1.35 / 72 + len(items) * 7 / 72
+        need = total_lines * 12 * 1.55 / 72 + len(items) * 8 / 72
         scale = min(1.0, (h - (yy - top) - 0.15) / need) if need > 0 else 1.0
         k = max(0.62, scale)
         box = txt(s, cx + pad, yy, cw - 2 * pad, h - (yy - top) - 0.12, [])
